@@ -61,6 +61,9 @@ export const USER_DEACTIVATED = 'Account deactivated successfully';
 export const USER_DEACTIVATED_WITH_ID = (id: string) =>
   `Account ${id} deactivated successfully`;
 
+// ==================== USER LIST SUCCESS ====================
+export const USERS_RETRIEVAL_SUCCESS = 'Users retrieved successfully';
+
 // ==================== ACCOUNT RELATED SUCCESS ====================
 export const ACCOUNT_DELETION_SUCCESS = 'Account deleted successfully';
 export const ACCOUNT_DELETION_SUCCESS_WITH_ID = (id: string) =>

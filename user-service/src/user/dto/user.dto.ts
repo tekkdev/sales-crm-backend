@@ -20,6 +20,16 @@ export class GetUserByEmailDto {
   email: string;
 }
 
+export class GetUserByEmailOrIdDto {
+  @IsOptional()
+  @IsMongoId({ message: 'Invalid user ID format' })
+  id?: string;
+
+  @IsOptional()
+  @IsEmail({}, { message: 'Please provide a valid email address' })
+  email?: string;
+}
+
 export class CreateUserDto {
   @IsString()
   @IsNotEmpty()

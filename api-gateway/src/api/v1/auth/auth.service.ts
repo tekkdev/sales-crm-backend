@@ -51,16 +51,13 @@ export class AuthService {
     response: ApiResponse,
     serviceName: string,
   ): void {
-    if (!response.success) {
-      this.handleServiceError(response, serviceName);
-    }
+    if (!response.success) this.handleServiceError(response, serviceName);
 
-    if (!response.data) {
+    if (!response.data)
       throw new HttpException(
         `${serviceName} did not return expected data`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
-    }
   }
 
   async onModuleInit() {
@@ -90,7 +87,28 @@ export class AuthService {
     this.logger.log(`📤 Starting user registration process`);
 
     try {
-      // Step 1: Create user in User Service
+      // Step 1: Check if user already exists
+      this.logger.log(
+        `📤 Checking if user exists with email: ${registrationData.email}`,
+      );
+      const userExists: ApiResponse | null = await handleAsyncWithMessages(
+        () => this.userGatewayService.getUserByEmail(registrationData.email),
+        this.logger,
+        `📥 Received response from User Service for email check: ${registrationData.email}`,
+        `📡 Service unavailable for user email check: ${registrationData.email}`,
+      );
+
+      if (userExists?.success && userExists?.data) {
+        this.logger.warn(
+          `⚠️ User with email ${registrationData.email} already exists`,
+        );
+        throw new HttpException(
+          `User with email ${registrationData.email} already exists`,
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      // Step 2: Create user in User Service
       this.logger.log(`📤 Creating user in User Service`);
       const userData = {
         firstName: registrationData.firstName,
@@ -98,21 +116,18 @@ export class AuthService {
         email: registrationData.email,
       };
 
-      // const userExists: ApiResponse =
-      //   await this.userGatewayService.getUserByEmail(registrationData.email);
+      const userResponse: ApiResponse | null = await handleAsyncWithMessages(
+        () => this.userGatewayService.createUser(userData),
+        this.logger,
+        `📥 Received response from User Service for user creation: ${registrationData.email}`,
+        `📡 Service unavailable for user creation: ${registrationData.email}`,
+      );
 
-      // if (userExists.success && userExists.data) {
-      //   this.logger.warn(
-      //     `⚠️ User with email ${registrationData.email} already exists`,
-      //   );
-      //   throw new HttpException(
-      //     `User with email ${registrationData.email} already exists`,
-      //     HttpStatus.CONFLICT,
-      //   );
-      // }
-
-      const userResponse: ApiResponse =
-        await this.userGatewayService.createUser(userData);
+      if (!userResponse)
+        throw new HttpException(
+          SERVICE_UNAVAILABLE_FOR_OPERATION('user creation'),
+          HttpStatus.SERVICE_UNAVAILABLE,
+        );
 
       // Validate User Service response
       this.validateServiceResponse(userResponse, 'User Service');
@@ -120,7 +135,7 @@ export class AuthService {
       const userId = userResponse.data._id || userResponse.data.id;
       this.logger.log(`✅ User created successfully with ID: ${userId}`);
 
-      // Step 2: Create auth user in Auth Service with userId
+      // Step 3: Create auth user in Auth Service with userId
       this.logger.log(`📤 Creating auth user in Auth Service`);
       const authData = {
         email: registrationData.email,

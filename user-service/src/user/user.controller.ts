@@ -6,16 +6,27 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { MessagePattern } from '@nestjs/microservices';
-import { GetUserDto, CreateUserDto, UpdateUserDto } from './dto/user.dto';
+import {
+  GetUserDto,
+  CreateUserDto,
+  UpdateUserDto,
+  GetUserByEmailOrIdDto,
+} from './dto/user.dto';
 import { UserService } from './user.service';
 import { IUser } from './interface/user.interface';
 import { ServiceResponseUtil } from 'src/utils/service-response.util';
 import { ServiceResponse } from 'src/interfaces/response.interface';
-import { USER_ALREADY_EXIST_WITH_EMAIL } from 'src/constants/error.constants';
+import {
+  USER_ALREADY_EXIST_WITH_EMAIL,
+  VALIDATION_ERROR_EMAIL_OR_ID_REQUIRED,
+  VALIDATION_ERROR_USER_ID_REQUIRED,
+  USER_ALREADY_DELETED_WITH_ID,
+} from 'src/constants/error.constants';
 import {
   USER_RETRIEVAL_SUCCESS,
   USER_CREATION_SUCCESS,
   USER_UPDATE_SUCCESS,
+  USERS_RETRIEVAL_SUCCESS,
 } from 'src/constants/success.constant';
 
 // user-service/src/user/user.controller.ts
@@ -47,7 +58,7 @@ export class UserController {
     try {
       if (!data.id)
         return this.responseUtil.createValidationError(
-          'User ID is required',
+          VALIDATION_ERROR_USER_ID_REQUIRED,
           { field: 'id', value: data.id },
           requestId,
         );
@@ -60,7 +71,7 @@ export class UserController {
       if (user.isDeleted)
         return this.responseUtil.createError(
           'USER_DELETED',
-          'User has been deleted',
+          USER_ALREADY_DELETED_WITH_ID(data.id),
           HttpStatus.GONE,
           { deletedAt: user.deletedAt },
           requestId,
@@ -76,6 +87,69 @@ export class UserController {
         requestId,
       });
 
+      return this.responseUtil.createServerError(
+        'Failed to retrieve user',
+        { originalError: error.message },
+        requestId,
+      );
+    }
+  }
+
+  @MessagePattern({ cmd: 'get_user_by_email_or_id' })
+  async getUserByEmailOrId(
+    data: GetUserByEmailOrIdDto,
+  ): Promise<ServiceResponse> {
+    const requestId = `req-${Date.now()}`;
+    this.logger.log(`📨 Received request to get user by email or ID`, {
+      requestId,
+    });
+
+    try {
+      // Build filter dynamically based on provided fields
+      const filter: any = {};
+      const conditions: any[] = [];
+
+      if (data.id) conditions.push({ _id: data.id });
+      if (data.email) conditions.push({ email: data.email });
+
+      if (conditions.length === 0)
+        return this.responseUtil.createValidationError(
+          VALIDATION_ERROR_EMAIL_OR_ID_REQUIRED,
+          { email: data?.email, id: data?.id },
+          requestId,
+        );
+
+      // Use $or if multiple conditions, otherwise use single condition
+      if (conditions.length === 1) Object.assign(filter, conditions[0]);
+      else filter.$or = conditions;
+
+      const user: IUser | null = await this.userService.findOne(filter);
+
+      if (!user)
+        return this.responseUtil.createNotFound(
+          'User',
+          data?.id || data?.email || 'unknown',
+          requestId,
+        );
+
+      if (user.isDeleted)
+        return this.responseUtil.createError(
+          'USER_DELETED',
+          USER_ALREADY_DELETED_WITH_ID(String(user?._id)),
+          HttpStatus.GONE,
+          { deletedAt: user.deletedAt },
+          requestId,
+        );
+
+      return this.responseUtil.createSuccess(
+        user,
+        USER_RETRIEVAL_SUCCESS,
+        requestId,
+      );
+    } catch (error) {
+      this.logger.error(`❌ Error retrieving user by email or ID:`, error, {
+        requestId,
+      });
       return this.responseUtil.createServerError(
         'Failed to retrieve user',
         { originalError: error.message },
@@ -110,7 +184,7 @@ export class UserController {
             hasPrev: page > 1,
           },
         },
-        'Users retrieved successfully',
+        USERS_RETRIEVAL_SUCCESS,
         requestId,
       );
     } catch (error) {

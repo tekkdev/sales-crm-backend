@@ -9,10 +9,7 @@ import {
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, timeout } from 'rxjs';
 import { handleAsyncWithMessages } from 'src/utils/async-handler.utils';
-import {
-  SERVICE_TIMEOUT_FOR_OPERATION,
-  SERVICE_UNAVAILABLE_FOR_OPERATION,
-} from 'src/constants/error.constants';
+import { SERVICE_UNAVAILABLE_FOR_OPERATION } from 'src/constants/error.constants';
 import { ApiResponse } from 'src/utils/api-response.util';
 
 @Injectable()
@@ -68,7 +65,7 @@ export class UserGatewayService implements OnModuleInit {
     return result;
   }
 
-  async getUser(id: string): Promise<ApiResponse> {
+  async getUserById(id: string): Promise<ApiResponse> {
     this.logger.log(`📤 Sending request to User Service for ID: ${id}`);
 
     const result = await handleAsyncWithMessages(
@@ -87,6 +84,30 @@ export class UserGatewayService implements OnModuleInit {
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
+
+    return result;
+  }
+
+  async getUserByEmail(data: any): Promise<ApiResponse> {
+    this.logger.log(`📤 Sending request to User Service for email or ID`);
+
+    const result = await handleAsyncWithMessages(
+      () =>
+        firstValueFrom(
+          this.userClient
+            .send({ cmd: 'get_user_by_email' }, data)
+            .pipe(timeout(5000)),
+        ),
+      this.logger,
+      '📥 Received response from User Service for email or ID',
+      '📡 Service unavailable for user retrieval by email or ID',
+    );
+
+    if (!result)
+      throw new HttpException(
+        SERVICE_UNAVAILABLE_FOR_OPERATION(`user retrieval by email or ID`),
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
 
     return result;
   }

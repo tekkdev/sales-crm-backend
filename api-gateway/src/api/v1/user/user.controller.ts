@@ -51,7 +51,7 @@ export class UserGatewayController {
   @Get(':id')
   async getUser(@Param('id') id: string): Promise<ApiResponse> {
     this.logger.log(`📥 API Gateway: Received request for user ID: ${id}`);
-    const serviceResponse = await this.userGatewayService.getUser(id);
+    const serviceResponse = await this.userGatewayService.getUserById(id);
 
     return this.apiResponseUtil.transformServiceResponse(
       serviceResponse,

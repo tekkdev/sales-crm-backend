@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, SortOrder, Types } from 'mongoose';
-import { UpdateUserDto, UserResponseDto } from './dto/user.dto';
+import {
+  GetUserByEmailOrIdDto,
+  UpdateUserDto,
+  UserResponseDto,
+} from './dto/user.dto';
 import { User } from './model/user.model';
 import { IUser } from './interface/user.interface';
 
