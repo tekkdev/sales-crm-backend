@@ -91,58 +91,51 @@ export class UserGatewayService implements OnModuleInit {
     return result;
   }
 
-  async createUser(data: any) {
+  async createUser(data: any): Promise<ApiResponse> {
     this.logger.log(`📤 Sending request to User Service to create user`);
-    try {
-      const result: ApiResponse = await firstValueFrom(
-        this.userClient.send({ cmd: 'create_user' }, data).pipe(timeout(5000)),
-      );
-      this.logger.log(`📥 Received response from User Service to create user`);
-      return result;
-    } catch (error) {
-      if (error.name === 'TimeoutError') {
-        this.logger.error(`⏰ Service timeout for user creation`, error);
-        throw new HttpException(
-          SERVICE_TIMEOUT_FOR_OPERATION(`user creation`),
-          HttpStatus.REQUEST_TIMEOUT,
-        );
-      }
 
-      this.logger.error(`📡 Service unavailable for user creation`, error);
+    const result = await handleAsyncWithMessages(
+      () =>
+        firstValueFrom(
+          this.userClient
+            .send({ cmd: 'create_user' }, data)
+            .pipe(timeout(5000)),
+        ),
+      this.logger,
+      '📥 Received response from User Service to create user',
+      '📡 Service unavailable for user creation',
+    );
+
+    if (!result)
       throw new HttpException(
         SERVICE_UNAVAILABLE_FOR_OPERATION(`user creation`),
         HttpStatus.SERVICE_UNAVAILABLE,
       );
-    }
+
+    return result;
   }
 
   async updateProfile(data: any): Promise<ApiResponse> {
     this.logger.log(`📤 Sending request to User Service to update profile`);
 
-    try {
-      const result = await firstValueFrom(
-        this.userClient
-          .send({ cmd: 'update_user_profile' }, data)
-          .pipe(timeout(5000)),
-      );
-      this.logger.log(
-        `📥 Received response from User Service to update profile`,
-      );
-      return result;
-    } catch (error) {
-      if (error.name === 'TimeoutError') {
-        this.logger.error(`⏰ Service timeout for profile update`, error);
-        throw new HttpException(
-          SERVICE_TIMEOUT_FOR_OPERATION(`user profile update`),
-          HttpStatus.REQUEST_TIMEOUT,
-        );
-      }
+    const result = await handleAsyncWithMessages(
+      () =>
+        firstValueFrom(
+          this.userClient
+            .send({ cmd: 'update_user_profile' }, data)
+            .pipe(timeout(5000)),
+        ),
+      this.logger,
+      '📥 Received response from User Service to update profile',
+      '📡 Service unavailable for profile update',
+    );
 
-      this.logger.error(`📡 Service unavailable for profile update`, error);
+    if (!result)
       throw new HttpException(
         SERVICE_UNAVAILABLE_FOR_OPERATION(`user profile update`),
         HttpStatus.SERVICE_UNAVAILABLE,
       );
-    }
+
+    return result;
   }
 }
