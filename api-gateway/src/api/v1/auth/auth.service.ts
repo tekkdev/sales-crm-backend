@@ -10,6 +10,10 @@ import { firstValueFrom, timeout } from 'rxjs';
 import { handleAsyncWithMessages } from 'src/utils/async-handler.utils';
 import { UserGatewayService } from '../user/user.service';
 import { ApiResponse } from 'src/utils/api-response.util';
+import {
+  SERVICE_TIMEOUT_FOR_OPERATION,
+  SERVICE_UNAVAILABLE_FOR_OPERATION,
+} from 'src/constants/error.constants';
 
 @Injectable()
 export class AuthService {
@@ -139,7 +143,7 @@ export class AuthService {
 
       if (!authResponse)
         throw new HttpException(
-          'Service unavailable for user registration',
+          SERVICE_UNAVAILABLE_FOR_OPERATION('user registration'),
           HttpStatus.SERVICE_UNAVAILABLE,
         );
 
@@ -172,7 +176,7 @@ export class AuthService {
 
     if (!authResponse)
       throw new HttpException(
-        `Service unavailable for login`,
+        SERVICE_UNAVAILABLE_FOR_OPERATION('login'),
         HttpStatus.SERVICE_UNAVAILABLE,
       );
 
@@ -199,7 +203,7 @@ export class AuthService {
 
     if (!authResponse)
       throw new HttpException(
-        'Service unavailable for token refresh',
+        SERVICE_UNAVAILABLE_FOR_OPERATION('token refresh'),
         HttpStatus.SERVICE_UNAVAILABLE,
       );
 
@@ -226,7 +230,7 @@ export class AuthService {
 
     if (!authResponse)
       throw new HttpException(
-        `Service unavailable for password reset`,
+        SERVICE_UNAVAILABLE_FOR_OPERATION('password reset'),
         HttpStatus.SERVICE_UNAVAILABLE,
       );
 
