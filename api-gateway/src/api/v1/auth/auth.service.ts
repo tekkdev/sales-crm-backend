@@ -125,14 +125,25 @@ export class AuthService {
         userId,
       };
 
-      const authResponse: ApiResponse = await firstValueFrom(
-        this.authClient
-          .send({ cmd: 'register_user' }, authData)
-          .pipe(timeout(5000)),
+      const authResponse = await handleAsyncWithMessages(
+        () =>
+          firstValueFrom(
+            this.authClient
+              .send({ cmd: 'register_user' }, authData)
+              .pipe(timeout(5000)),
+          ),
+        this.logger,
+        '📥 Received response from Auth Service for user registration',
+        '📡 Service unavailable for user registration',
       );
 
-      if (!authResponse.success)
-        this.handleServiceError(authResponse, 'Auth Service');
+      if (!authResponse)
+        throw new HttpException(
+          'Service unavailable for user registration',
+          HttpStatus.SERVICE_UNAVAILABLE,
+        );
+
+      this.validateServiceResponse(authResponse, 'Auth Service');
 
       this.logger.log(`✅ Auth user created successfully`);
       return authResponse;
@@ -147,60 +158,81 @@ export class AuthService {
       `📤 Starting user login process for email: ${loginData.email}`,
     );
 
-    try {
-      const authResponse: ApiResponse = await firstValueFrom(
-        this.authClient
-          .send({ cmd: 'login_user' }, loginData)
-          .pipe(timeout(5000)),
+    const authResponse = await handleAsyncWithMessages(
+      () =>
+        firstValueFrom(
+          this.authClient
+            .send({ cmd: 'login_user' }, loginData)
+            .pipe(timeout(5000)),
+        ),
+      this.logger,
+      `📥 Received response from Auth Service for login: ${loginData.email}`,
+      `📡 Service unavailable for login: ${loginData.email}`,
+    );
+
+    if (!authResponse)
+      throw new HttpException(
+        `Service unavailable for login`,
+        HttpStatus.SERVICE_UNAVAILABLE,
       );
 
-      this.validateServiceResponse(authResponse, 'Auth Service');
+    this.validateServiceResponse(authResponse, 'Auth Service');
 
-      this.logger.log(`✅ User logged in successfully: ${loginData.email}`);
-      return authResponse;
-    } catch (error) {
-      this.logger.error(`❌ User login failed for ${loginData.email}:`, error);
-      throw error;
-    }
+    this.logger.log(`✅ User logged in successfully: ${loginData.email}`);
+    return authResponse;
   }
 
   async refreshToken(refreshTokenDto: any) {
     this.logger.log(`📤 Starting token refresh process`);
 
-    try {
-      const authResponse: ApiResponse = await firstValueFrom(
-        this.authClient
-          .send({ cmd: 'refresh_token' }, refreshTokenDto)
-          .pipe(timeout(5000)),
+    const authResponse = await handleAsyncWithMessages(
+      () =>
+        firstValueFrom(
+          this.authClient
+            .send({ cmd: 'refresh_token' }, refreshTokenDto)
+            .pipe(timeout(5000)),
+        ),
+      this.logger,
+      '📥 Received response from Auth Service for token refresh',
+      '📡 Service unavailable for token refresh',
+    );
+
+    if (!authResponse)
+      throw new HttpException(
+        'Service unavailable for token refresh',
+        HttpStatus.SERVICE_UNAVAILABLE,
       );
 
-      this.validateServiceResponse(authResponse, 'Auth Service');
+    this.validateServiceResponse(authResponse, 'Auth Service');
 
-      this.logger.log(`✅ Token refreshed successfully`);
-      return authResponse;
-    } catch (error) {
-      this.logger.error(`❌ Token refresh failed:`, error);
-      throw error;
-    }
+    this.logger.log(`✅ Token refreshed successfully`);
+    return authResponse;
   }
 
   async resetPassword(email: string) {
     this.logger.log(`📤 Starting password reset process for email: ${email}`);
 
-    try {
-      const authResponse: ApiResponse = await firstValueFrom(
-        this.authClient
-          .send({ cmd: 'reset_password' }, email)
-          .pipe(timeout(5000)),
+    const authResponse = await handleAsyncWithMessages(
+      () =>
+        firstValueFrom(
+          this.authClient
+            .send({ cmd: 'reset_password' }, email)
+            .pipe(timeout(5000)),
+        ),
+      this.logger,
+      `📥 Received response from Auth Service for password reset: ${email}`,
+      `📡 Service unavailable for password reset: ${email}`,
+    );
+
+    if (!authResponse)
+      throw new HttpException(
+        `Service unavailable for password reset`,
+        HttpStatus.SERVICE_UNAVAILABLE,
       );
 
-      this.validateServiceResponse(authResponse, 'Auth Service');
+    this.validateServiceResponse(authResponse, 'Auth Service');
 
-      this.logger.log(`✅ Password reset email sent successfully`);
-      return authResponse;
-    } catch (error) {
-      this.logger.error(`❌ Password reset failed:`, error);
-      throw error;
-    }
+    this.logger.log(`✅ Password reset email sent successfully`);
+    return authResponse;
   }
 }
