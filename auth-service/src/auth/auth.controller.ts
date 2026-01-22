@@ -96,6 +96,7 @@ export class AuthController {
       this.logger.error(`❌ Error registering auth user:`, error, {
         requestId,
       });
+
       return this.responseUtil.createServerError(
         SOMETHING_WENT_WRONG_TRY_AGAIN,
         { originalError: error.message },
@@ -141,7 +142,7 @@ export class AuthController {
         );
       }
 
-      if (error.message.includes(ACCOUNT_INACTIVE)) {
+      if (error.message.includes(ACCOUNT_INACTIVE))
         return this.responseUtil.createError(
           'ACCOUNT_INACTIVE',
           ACCOUNT_INACTIVE_WITH_ID(loginDto.email),
@@ -149,7 +150,6 @@ export class AuthController {
           { email: loginDto.email },
           requestId,
         );
-      }
 
       return this.responseUtil.createServerError(
         SOMETHING_WENT_WRONG_TRY_AGAIN,
@@ -171,6 +171,7 @@ export class AuthController {
       this.logger.log(`✅ Token refreshed successfully`, {
         requestId,
       });
+
       return this.responseUtil.createSuccess(
         result,
         TOKEN_REFRESH_SUCCESS,
@@ -219,9 +220,11 @@ export class AuthController {
       const result = await this.authService.resetPasswordToken(
         forgotPasswordDto.email,
       );
+
       this.logger.log(`✅ Reset password token sent successfully`, {
         requestId,
       });
+
       return this.responseUtil.createSuccess(
         result,
         PASSWORD_RESET_TOKEN_SENT_FOR_USER(forgotPasswordDto.email),
