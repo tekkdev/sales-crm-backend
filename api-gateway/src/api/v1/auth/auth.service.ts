@@ -144,7 +144,7 @@ export class AuthService {
         userId,
       };
 
-      const authResponse = await handleAsyncWithMessages(
+      const authResponse: ApiResponse = await handleAsyncWithMessages(
         () =>
           firstValueFrom(
             this.authClient
@@ -177,7 +177,7 @@ export class AuthService {
       `📤 Starting user login process for email: ${loginData.email}`,
     );
 
-    const authResponse = await handleAsyncWithMessages(
+    const authResponse: ApiResponse = await handleAsyncWithMessages(
       () =>
         firstValueFrom(
           this.authClient
@@ -195,6 +195,15 @@ export class AuthService {
         HttpStatus.SERVICE_UNAVAILABLE,
       );
 
+    const userResponse: ApiResponse | null = await handleAsyncWithMessages(
+      () => this.userGatewayService.getUserById(authResponse.data.user.userId),
+      this.logger,
+      `📥 Received response from User Service for fetching user data: ${loginData.email}`,
+      `📡 Service unavailable for fetching user data: ${loginData.email}`,
+    );
+
+    authResponse.data.user.userId = userResponse?.data;
+
     this.validateServiceResponse(authResponse, 'Auth Service');
 
     this.logger.log(`✅ User logged in successfully: ${loginData.email}`);
@@ -204,7 +213,7 @@ export class AuthService {
   async refreshToken(refreshTokenDto: any) {
     this.logger.log(`📤 Starting token refresh process`);
 
-    const authResponse = await handleAsyncWithMessages(
+    const authResponse: ApiResponse = await handleAsyncWithMessages(
       () =>
         firstValueFrom(
           this.authClient
@@ -231,7 +240,7 @@ export class AuthService {
   async resetPassword(email: string) {
     this.logger.log(`📤 Starting password reset process for email: ${email}`);
 
-    const authResponse = await handleAsyncWithMessages(
+    const authResponse: ApiResponse = await handleAsyncWithMessages(
       () =>
         firstValueFrom(
           this.authClient

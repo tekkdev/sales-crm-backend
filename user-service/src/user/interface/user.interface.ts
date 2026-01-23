@@ -7,7 +7,6 @@ export interface IUser extends Document {
   email: string;
   dateOfBirth?: Date;
   gender?: string;
-  isActive: boolean;
   isDeleted: boolean;
   deletedAt: Date | null;
   createdAt: Date;

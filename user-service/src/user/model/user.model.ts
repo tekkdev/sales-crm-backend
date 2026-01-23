@@ -52,12 +52,6 @@ export class User extends Document {
   gender?: string;
 
   @Prop({
-    type: Boolean,
-    default: false,
-  })
-  isActive: boolean;
-
-  @Prop({
     type: Date,
     default: Date.now,
   })
