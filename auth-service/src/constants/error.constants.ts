@@ -72,6 +72,11 @@ export const LAST_NAME_LENGTH_SHORT =
 export const LAST_NAME_LENGTH_SHORT_FOR_USER = (name: string) =>
   `Last name "${name}" must be at least 2 characters long`;
 
+// ==================== VALIDATION ERRORS ====================
+export const VALIDATION_ERROR_EMAIL_OR_ID_REQUIRED =
+  'Either email or id must be provided';
+export const VALIDATION_ERROR_USER_ID_REQUIRED = 'User ID is required';
+
 // ==================== ACCOUNT RELATED ERRORS ====================
 export const ACCOUNT_INACTIVE =
   'Account is inactive. Please contact support for assistance.';

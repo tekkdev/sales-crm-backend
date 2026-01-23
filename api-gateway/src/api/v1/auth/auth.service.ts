@@ -6,17 +6,11 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices/client/client-proxy';
-import { first, firstValueFrom, timeout } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
 import { handleAsyncWithMessages } from 'src/utils/async-handler.utils';
 import { UserGatewayService } from '../user/user.service';
 import { ApiResponse } from 'src/utils/api-response.util';
-import {
-  SERVICE_TIMEOUT_FOR_OPERATION,
-  SERVICE_UNAVAILABLE_FOR_OPERATION,
-  TOKEN_EXPIRED,
-  INVALID_TOKEN,
-  NEW_PASSWORD_SAME_AS_OLD
-} from 'src/constants/error.constants';
+import { SERVICE_UNAVAILABLE_FOR_OPERATION } from 'src/constants/error.constants';
 import { SetNewPasswordDto, SetNewPasswordInternalDto } from './dto/auth.dto';
 
 @Injectable()
@@ -55,16 +49,13 @@ export class AuthService {
     response: ApiResponse,
     serviceName: string,
   ): void {
-    if (!response.success) {
-      this.handleServiceError(response, serviceName);
-    }
+    if (!response.success) this.handleServiceError(response, serviceName);
 
-    if (!response.data) {
+    if (!response.data)
       throw new HttpException(
         `${serviceName} did not return expected data`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
-    }
   }
 
   async onModuleInit() {
@@ -94,7 +85,28 @@ export class AuthService {
     this.logger.log(`📤 Starting user registration process`);
 
     try {
-      // Step 1: Create user in User Service
+      // Step 1: Check if user already exists
+      this.logger.log(
+        `📤 Checking if user exists with email: ${registrationData.email}`,
+      );
+      const userExists: ApiResponse | null = await handleAsyncWithMessages(
+        () => this.userGatewayService.getUserByEmail(registrationData.email),
+        this.logger,
+        `📥 Received response from User Service for email check: ${registrationData.email}`,
+        `📡 Service unavailable for user email check: ${registrationData.email}`,
+      );
+
+      if (userExists?.success && userExists?.data) {
+        this.logger.warn(
+          `⚠️ User with email ${registrationData.email} already exists`,
+        );
+        throw new HttpException(
+          `User with email ${registrationData.email} already exists`,
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      // Step 2: Create user in User Service
       this.logger.log(`📤 Creating user in User Service`);
       const userData = {
         firstName: registrationData.firstName,
@@ -102,33 +114,27 @@ export class AuthService {
         email: registrationData.email,
       };
 
-      // const userExists: ApiResponse =
-      //   await this.userGatewayService.getUserByEmail(registrationData.email);
+      const userResponse: ApiResponse | null = await handleAsyncWithMessages(
+        () => this.userGatewayService.createUser(userData),
+        this.logger,
+        `📥 Received response from User Service for user creation: ${registrationData.email}`,
+        `📡 Service unavailable for user creation: ${registrationData.email}`,
+      );
 
-      // if (userExists.success && userExists.data) {
-      //   this.logger.warn(
-      //     `⚠️ User with email ${registrationData.email} already exists`,
-      //   );
-      //   throw new HttpException(
-      //     `User with email ${registrationData.email} already exists`,
-      //     HttpStatus.CONFLICT,
-      //   );
-      // }
-
-      const userResponse: ApiResponse =
-        await this.userGatewayService.createUser(userData);
+      if (!userResponse)
+        throw new HttpException(
+          SERVICE_UNAVAILABLE_FOR_OPERATION('user creation'),
+          HttpStatus.SERVICE_UNAVAILABLE,
+        );
 
       // Validate User Service response
       this.validateServiceResponse(userResponse, 'User Service');
-      this.logger.log(`✅ Validating User Service Response: ${JSON.stringify(userResponse)}`);
-
 
       const userId = userResponse.data._id || userResponse.data.id;
       this.logger.log(`✅ User created successfully with ID: ${userId}`);
 
-      // Step 2: Create auth user in Auth Service with userId
+      // Step 3: Create auth user in Auth Service with userId
       this.logger.log(`📤 Creating auth user in Auth Service`);
-      
       const authData = {
         email: registrationData.email,
         password: registrationData.password,
@@ -136,7 +142,7 @@ export class AuthService {
         userId,
       };
 
-      const authResponse = await handleAsyncWithMessages(
+      const authResponse: ApiResponse = await handleAsyncWithMessages(
         () =>
           firstValueFrom(
             this.authClient
@@ -169,7 +175,7 @@ export class AuthService {
       `📤 Starting user login process for email: ${loginData.email}`,
     );
 
-    const authResponse = await handleAsyncWithMessages(
+    const authResponse: ApiResponse = await handleAsyncWithMessages(
       () =>
         firstValueFrom(
           this.authClient
@@ -187,6 +193,15 @@ export class AuthService {
         HttpStatus.SERVICE_UNAVAILABLE,
       );
 
+    const userResponse: ApiResponse | null = await handleAsyncWithMessages(
+      () => this.userGatewayService.getUserById(authResponse.data.user.userId),
+      this.logger,
+      `📥 Received response from User Service for fetching user data: ${loginData.email}`,
+      `📡 Service unavailable for fetching user data: ${loginData.email}`,
+    );
+
+    authResponse.data.user.userId = userResponse?.data;
+
     this.validateServiceResponse(authResponse, 'Auth Service');
 
     this.logger.log(`✅ User logged in successfully: ${loginData.email}`);
@@ -196,7 +211,7 @@ export class AuthService {
   async refreshToken(refreshTokenDto: any) {
     this.logger.log(`📤 Starting token refresh process`);
 
-    const authResponse = await handleAsyncWithMessages(
+    const authResponse: ApiResponse = await handleAsyncWithMessages(
       () =>
         firstValueFrom(
           this.authClient
@@ -223,7 +238,7 @@ export class AuthService {
   async resetPassword(email: string) {
     this.logger.log(`📤 Starting password reset process for email: ${email}`);
 
-    const authResponse = await handleAsyncWithMessages(
+    const authResponse: ApiResponse = await handleAsyncWithMessages(
       () =>
         firstValueFrom(
           this.authClient
@@ -269,7 +284,10 @@ export class AuthService {
         HttpStatus.SERVICE_UNAVAILABLE,
       );
 
-    this.logger.log(`✅ Reset token verified successfully`, JSON.stringify(authResponse));
+    this.logger.log(
+      `✅ Reset token verified successfully`,
+      JSON.stringify(authResponse),
+    );
 
     this.validateServiceResponse(authResponse, 'Auth Service');
     this.logger.log(`✅ Reset token verified successfully`);
@@ -284,8 +302,12 @@ export class AuthService {
     };
 
     const setNewPasswordResponse = await handleAsyncWithMessages(
-      () => firstValueFrom(
-      this.authClient.send({cmd: "set_new_password"}, payload).pipe(timeout(5000))),
+      () =>
+        firstValueFrom(
+          this.authClient
+            .send({ cmd: 'set_new_password' }, payload)
+            .pipe(timeout(5000)),
+        ),
       this.logger,
       '📥 Received response from Auth Service for setting new password',
       '📡 Service unavailable for setting new password',
@@ -293,7 +315,7 @@ export class AuthService {
 
     console.log(setNewPasswordResponse);
 
-    if(!setNewPasswordResponse)
+    if (!setNewPasswordResponse)
       throw new HttpException(
         SERVICE_UNAVAILABLE_FOR_OPERATION('setting new password'),
         HttpStatus.SERVICE_UNAVAILABLE,
