@@ -58,3 +58,37 @@ export class RefreshTokenDto {
   @IsNotEmpty({ message: 'Refresh token is required' })
   refreshToken: string;
 }
+
+export class SetNewPasswordDto {
+  @IsString({ message: 'New password must be a string' })
+  @MinLength(6, { message: 'New password must be at least 6 characters long' })
+  @MaxLength(50, { message: 'New password must not exceed 50 characters' })
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
+    message:
+      'New password must contain at least one uppercase letter, one lowercase letter, and one number',
+  })
+  newPassword: string;
+
+    @IsString({ message: 'Confirm password must be a string' })
+  @IsNotEmpty({ message: 'Confirm password is required' })
+  confirmPassword: string;
+
+    @IsString({ message: 'Reset token must be a string' })
+  @IsNotEmpty({ message: 'Reset token is required' })
+  token: string;
+}
+
+
+export class SetNewPasswordInternalDto {
+  @IsString()
+  userId: string;
+
+  @IsString()
+  @MinLength(8, { message: 'Password must be at least 8 characters long' })
+  @MaxLength(32, { message: 'Password must not exceed 32 characters' })
+  newPassword: string;
+
+  @IsString()
+  confirmPassword: string;
+}
+

@@ -3,13 +3,17 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { AuthUser, AuthUserDocument } from './model/auth.user.model';
-import { CreateAuthUserDto, LoginDto } from './dto/auth.user.dto';
+import { CreateAuthUserDto, LoginDto,SetNewPasswordInternalDto } from './dto/auth.user.dto';
 import { JwtTokenService } from '../jwt-token/jwt-token.service';
 import { DecodedRefreshToken, IAuth } from './interface/auth.user.interface';
 import {
   USER_NOT_FOUND,
   INVALID_CREDENTIALS,
   ACCOUNT_INACTIVE,
+    TOKEN_EXPIRED,
+    INVALID_TOKEN,
+    NEW_PASSWORD_SAME_AS_OLD,
+    PASSWORD_MISMATCH
 } from 'src/constants/error.constants';
 
 @Injectable()
@@ -161,6 +165,57 @@ export class AuthService {
         message: 'Reset password token sent successfully',
       };
     } catch (error) {
+      throw error;
+    }
+  }
+
+  async verifyResetToken(token: string): Promise<any> {
+    try {
+      const decodedToken =
+        await this.jwtTokenService.verifyPasswordResetToken(token);
+      return {
+        userId: decodedToken.sub,
+        email: decodedToken.email,
+        message: 'Reset token is valid',
+      };
+    } catch (error) {
+      if (error.name === 'TokenExpiredError')
+        throw new Error(TOKEN_EXPIRED);
+
+      if (error.name === 'JsonWebTokenError')
+        throw new Error(INVALID_TOKEN);
+          
+      throw error;
+    }
+  }
+
+  async setNewPassword(setNewPasswordInternalDto: SetNewPasswordInternalDto): Promise<any> {
+    try { 
+      const userAuth = await this.findOneByUserId(setNewPasswordInternalDto.userId); 
+
+      if(!userAuth) throw new Error(USER_NOT_FOUND);
+
+      const oldPassword = userAuth.password;
+
+      if (oldPassword === setNewPasswordInternalDto.newPassword)
+        throw new Error(NEW_PASSWORD_SAME_AS_OLD);
+
+      if (setNewPasswordInternalDto.newPassword !== setNewPasswordInternalDto.confirmPassword)
+        throw new Error(PASSWORD_MISMATCH);
+      
+      // Hash the new password
+      const saltRounds = 12;
+      const hashedPassword = await bcrypt.hash(setNewPasswordInternalDto.newPassword, saltRounds);
+
+      // Update user's password
+      await this.authUserModel.updateOne(
+        { userId: setNewPasswordInternalDto.userId },
+        { password: hashedPassword },
+      );
+
+      return { message: 'Password updated successfully' };
+    }
+    catch (error) {
       throw error;
     }
   }

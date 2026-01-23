@@ -78,6 +78,8 @@ export class UserGatewayService implements OnModuleInit {
       `📡 Service unavailable for user ID: ${id}`,
     );
 
+    console.log("UserGatewayService/getUser/result", result);
+
     if (!result) {
       throw new HttpException(
         SERVICE_UNAVAILABLE_FOR_OPERATION(`user retrieval for ID: ${id}`),

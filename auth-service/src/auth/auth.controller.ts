@@ -12,6 +12,7 @@ import {
   CreateAuthUserDto,
   ForgotPasswordDto,
   LoginDto,
+  SetNewPasswordInternalDto
 } from './dto/auth.user.dto';
 import { AuthService } from './auth.service';
 import {
@@ -33,6 +34,7 @@ import {
   REFRESH_TOKEN_EXPIRED,
   INVALID_REFRESH_TOKEN,
   TOKEN_EXPIRED,
+  INVALID_TOKEN,
   USER_ALREADY_EXIST_WITH_EMAIL,
 } from 'src/constants/error.constants';
 
@@ -251,4 +253,77 @@ export class AuthController {
       );
     }
   }
+
+  @MessagePattern({ cmd: 'verify_reset_token' })
+  async verifyResetToken(token: string): Promise<ServiceResponse> {
+    const requestId = `req-${Date.now()}`;
+    this.logger.log(`📨 Received request to verify reset token`, {
+      requestId,
+    });
+
+    try {
+      const result = await this.authService.verifyResetToken(token);
+      this.logger.log(`✅ Reset token verified successfully`, {
+        requestId,
+      });
+      return this.responseUtil.createSuccess(
+        result,
+        'Reset token verified successfully',
+        requestId,
+      );
+    } catch (error) {
+      this.logger.error(`❌ Error verifying reset token:`, error, {requestId});
+
+      if(error.message.includes('expired'))
+        return this.responseUtil.createError(
+          'TOKEN_EXPIRED',
+          TOKEN_EXPIRED,
+          HttpStatus.UNAUTHORIZED,
+          null,
+          requestId,
+        );
+
+      if(error.message.includes('Invalid reset token'))
+        return this.responseUtil.createError(
+          'INVALID_TOKEN',
+          INVALID_TOKEN,
+          HttpStatus.UNAUTHORIZED,
+          null,
+          requestId,
+        );
+
+      return this.responseUtil.createServerError(
+        SOMETHING_WENT_WRONG_TRY_AGAIN,
+        { originalError: error.message },
+        requestId,
+      );
+    }
+  }
+
+  @MessagePattern({ cmd: 'set_new_password' })
+  async setNewPassword(setNewPasswordInternalDto: SetNewPasswordInternalDto): Promise<ServiceResponse> {
+    const requestId = `req-${Date.now()}`;
+    this.logger.log(`📨 Received request to set new password`, {
+      requestId,
+    });
+
+    try {
+      const result = await this.authService.setNewPassword(setNewPasswordInternalDto);
+      this.logger.log(`✅ New password set successfully`, {
+        requestId,
+      });
+      return this.responseUtil.createSuccess(
+        result,
+        'New password set successfully',
+        requestId,
+      );
+    } catch (error) {
+      this.logger.error(`❌ Error setting new password:`, error, {requestId});  
+      return this.responseUtil.createServerError(
+        SOMETHING_WENT_WRONG_TRY_AGAIN,
+        { originalError: error.message },
+        requestId,
+      );
+    }
+}
 }
