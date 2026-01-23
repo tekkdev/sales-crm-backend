@@ -37,6 +37,9 @@ export const NEW_PASSWORD_SAME_AS_OLD =
   'New password should be different from old password';
 export const NEW_PASSWORD_SAME_AS_OLD_FOR_USER = (userId: string) =>
   `New password should be different from old password for user ${userId}`;
+export const PASSWORD_MISMATCH = 'Password and confirm password do not match';
+export const PASSWORD_MISMATCH_FOR_USER = (userId: string) =>
+  `Password and confirm password do not match for user ${userId}`;
 export const UNAUTHORIZED = 'Only admin can access this resource';
 export const UNAUTHORIZED_FOR_RESOURCE = (resource: string) =>
   `Only admin can access ${resource}`;
@@ -68,6 +71,11 @@ export const LAST_NAME_LENGTH_SHORT =
   'Last name must be at least 2 characters long';
 export const LAST_NAME_LENGTH_SHORT_FOR_USER = (name: string) =>
   `Last name "${name}" must be at least 2 characters long`;
+
+// ==================== VALIDATION ERRORS ====================
+export const VALIDATION_ERROR_EMAIL_OR_ID_REQUIRED =
+  'Either email or id must be provided';
+export const VALIDATION_ERROR_USER_ID_REQUIRED = 'User ID is required';
 
 // ==================== ACCOUNT RELATED ERRORS ====================
 export const ACCOUNT_INACTIVE =

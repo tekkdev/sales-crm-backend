@@ -10,10 +10,8 @@ import { firstValueFrom, timeout } from 'rxjs';
 import { handleAsyncWithMessages } from 'src/utils/async-handler.utils';
 import { UserGatewayService } from '../user/user.service';
 import { ApiResponse } from 'src/utils/api-response.util';
-import {
-  SERVICE_TIMEOUT_FOR_OPERATION,
-  SERVICE_UNAVAILABLE_FOR_OPERATION,
-} from 'src/constants/error.constants';
+import { SERVICE_UNAVAILABLE_FOR_OPERATION } from 'src/constants/error.constants';
+import { SetNewPasswordDto, SetNewPasswordInternalDto } from './dto/auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -262,5 +260,70 @@ export class AuthService {
 
     this.logger.log(`✅ Password reset email sent successfully`);
     return authResponse;
+  }
+
+  async setNewPassword(setNewPasswordDto: SetNewPasswordDto) {
+    // Step 1: Verify reset token with Auth Service
+    this.logger.log(`📤 Starting reset token verification process`);
+
+    const authResponse = await handleAsyncWithMessages(
+      () =>
+        firstValueFrom(
+          this.authClient
+            .send({ cmd: 'verify_reset_token' }, setNewPasswordDto.token)
+            .pipe(timeout(5000)),
+        ),
+      this.logger,
+      '📥 Received response from Auth Service for reset token verification',
+      '📡 Service unavailable for reset token verification',
+    );
+
+    if (!authResponse)
+      throw new HttpException(
+        SERVICE_UNAVAILABLE_FOR_OPERATION('reset token verification'),
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+
+    this.logger.log(
+      `✅ Reset token verified successfully`,
+      JSON.stringify(authResponse),
+    );
+
+    this.validateServiceResponse(authResponse, 'Auth Service');
+    this.logger.log(`✅ Reset token verified successfully`);
+
+    // Step 2: Set new password in Auth Service
+    this.logger.log(`📤 Setting new password in Auth Service`);
+
+    const payload: SetNewPasswordInternalDto = {
+      newPassword: setNewPasswordDto.newPassword,
+      confirmPassword: setNewPasswordDto.confirmPassword,
+      userId: authResponse.data.userId,
+    };
+
+    const setNewPasswordResponse = await handleAsyncWithMessages(
+      () =>
+        firstValueFrom(
+          this.authClient
+            .send({ cmd: 'set_new_password' }, payload)
+            .pipe(timeout(5000)),
+        ),
+      this.logger,
+      '📥 Received response from Auth Service for setting new password',
+      '📡 Service unavailable for setting new password',
+    );
+
+    console.log(setNewPasswordResponse);
+
+    if (!setNewPasswordResponse)
+      throw new HttpException(
+        SERVICE_UNAVAILABLE_FOR_OPERATION('setting new password'),
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+
+    this.validateServiceResponse(setNewPasswordResponse, 'Auth Service');
+
+    this.logger.log(`✅ New password set successfully`);
+    return setNewPasswordResponse;
   }
 }

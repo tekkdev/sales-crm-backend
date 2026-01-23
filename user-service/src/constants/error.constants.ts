@@ -37,6 +37,9 @@ export const NEW_PASSWORD_SAME_AS_OLD =
   'New password should be different from old password';
 export const NEW_PASSWORD_SAME_AS_OLD_FOR_USER = (userId: string) =>
   `New password should be different from old password for user ${userId}`;
+export const PASSWORD_MISMATCH = 'Password and confirm password do not match';
+export const PASSWORD_MISMATCH_FOR_USER = (userId: string) =>
+  `Password and confirm password do not match for user ${userId}`;
 export const UNAUTHORIZED = 'Only admin can access this resource';
 export const UNAUTHORIZED_FOR_RESOURCE = (resource: string) =>
   `Only admin can access ${resource}`;

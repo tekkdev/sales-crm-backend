@@ -13,6 +13,7 @@ import { ServiceResponseUtil } from './utils/service-response.util';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: '.env',
     }),
     JwtModule.registerAsync({
       global: true,

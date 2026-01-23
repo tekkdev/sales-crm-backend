@@ -2,7 +2,7 @@ import { Body, Controller, Get, Logger, Post } from '@nestjs/common';
 import { CONNECTION_SUCCESS_TO_SERVICE } from 'src/constants/success.constant';
 import { ApiResponse, ApiResponseUtil } from 'src/utils/api-response.util';
 import { AuthService } from './auth.service';
-import { LoginDto, RefreshTokenDto, RegisterDto } from './dto/auth.dto';
+import { LoginDto, RefreshTokenDto, RegisterDto, SetNewPasswordDto } from './dto/auth.dto';
 
 @Controller('public/auth')
 export class AuthGatewayController {
@@ -74,6 +74,18 @@ export class AuthGatewayController {
     return this.apiResponseUtil.transformServiceResponse(
       serviceResponse,
       'Password reset successful',
+    );
+  }
+
+  @Post('/set-new-password')
+  async setNewPassword(@Body() setNewPasswordDto : SetNewPasswordDto): Promise<ApiResponse> {
+    this.logger.log(`📥 API Gateway: Received set new password request`);
+
+    const serviceResponse = await this.authService.setNewPassword(setNewPasswordDto);
+
+    return this.apiResponseUtil.transformServiceResponse(
+      serviceResponse,
+      'Password set successfully',
     );
   }
 }
